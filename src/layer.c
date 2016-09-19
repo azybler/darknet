@@ -1,5 +1,4 @@
 #include "layer.h"
-#include "cuda.h"
 #include <stdlib.h>
 
 void free_layer(layer l)

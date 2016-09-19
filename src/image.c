@@ -854,8 +854,6 @@ image resize_image(image im, int w, int h)
     return resized;
 }
 
-#include "cuda.h"
-
 void test_resize(char *filename)
 {
     image im = load_image(filename, 0,0, 3);

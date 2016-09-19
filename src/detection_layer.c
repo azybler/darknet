@@ -3,7 +3,6 @@
 #include "softmax_layer.h"
 #include "blas.h"
 #include "box.h"
-#include "cuda.h"
 #include "utils.h"
 #include <stdio.h>
 #include <assert.h>

@@ -1,7 +1,6 @@
 #include "connected_layer.h"
 #include "batchnorm_layer.h"
 #include "utils.h"
-#include "cuda.h"
 #include "blas.h"
 #include "gemm.h"
 

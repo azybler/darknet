@@ -4,7 +4,6 @@
 
 #include "parser.h"
 #include "utils.h"
-#include "cuda.h"
 #include "blas.h"
 #include "connected_layer.h"
 
@@ -46,7 +45,6 @@ void average(int argc, char *argv[])
 {
     char *cfgfile = argv[2];
     char *outfile = argv[3];
-    gpu_index = -1;
     network net = parse_network_cfg(cfgfile);
     network sum = parse_network_cfg(cfgfile);
 
@@ -90,7 +88,6 @@ void average(int argc, char *argv[])
 
 void operations(char *cfgfile)
 {
-    gpu_index = -1;
     network net = parse_network_cfg(cfgfile);
     int i;
     long ops = 0;
@@ -107,7 +104,6 @@ void operations(char *cfgfile)
 
 void partial(char *cfgfile, char *weightfile, char *outfile, int max)
 {
-    gpu_index = -1;
     network net = parse_network_cfg(cfgfile);
     if(weightfile){
         load_weights_upto(&net, weightfile, max);
@@ -118,7 +114,6 @@ void partial(char *cfgfile, char *weightfile, char *outfile, int max)
 
 void stacked(char *cfgfile, char *weightfile, char *outfile)
 {
-    gpu_index = -1;
     network net = parse_network_cfg(cfgfile);
     if(weightfile){
         load_weights(&net, weightfile);
@@ -130,7 +125,6 @@ void stacked(char *cfgfile, char *weightfile, char *outfile)
 #include "convolutional_layer.h"
 void rescale_net(char *cfgfile, char *weightfile, char *outfile)
 {
-    gpu_index = -1;
     network net = parse_network_cfg(cfgfile);
     if(weightfile){
         load_weights(&net, weightfile);
@@ -148,7 +142,6 @@ void rescale_net(char *cfgfile, char *weightfile, char *outfile)
 
 void rgbgr_net(char *cfgfile, char *weightfile, char *outfile)
 {
-    gpu_index = -1;
     network net = parse_network_cfg(cfgfile);
     if(weightfile){
         load_weights(&net, weightfile);
@@ -166,7 +159,6 @@ void rgbgr_net(char *cfgfile, char *weightfile, char *outfile)
 
 void normalize_net(char *cfgfile, char *weightfile, char *outfile)
 {
-    gpu_index = -1;
     network net = parse_network_cfg(cfgfile);
     if(weightfile){
         load_weights(&net, weightfile);
@@ -189,7 +181,6 @@ void normalize_net(char *cfgfile, char *weightfile, char *outfile)
 
 void denormalize_net(char *cfgfile, char *weightfile, char *outfile)
 {
-    gpu_index = -1;
     network net = parse_network_cfg(cfgfile);
     if (weightfile) {
         load_weights(&net, weightfile);
@@ -245,12 +236,6 @@ int main(int argc, char **argv)
         fprintf(stderr, "usage: %s <function>\n", argv[0]);
         return 0;
     }
-    gpu_index = find_int_arg(argc, argv, "-i", 0);
-    if(find_arg(argc, argv, "-nogpu")) {
-        gpu_index = -1;
-    }
-
-    gpu_index = -1;
 
     if(0==strcmp(argv[1], "imagenet")){
         run_imagenet(argc, argv);
