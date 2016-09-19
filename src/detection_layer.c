@@ -28,10 +28,6 @@ detection_layer make_detection_layer(int batch, int inputs, int n, int side, int
     l.truths = l.side*l.side*(1+l.coords+l.classes);
     l.output = calloc(batch*l.outputs, sizeof(float));
     l.delta = calloc(batch*l.outputs, sizeof(float));
-#ifdef GPU
-    l.output_gpu = cuda_make_array(l.output, batch*l.outputs);
-    l.delta_gpu = cuda_make_array(l.delta, batch*l.outputs);
-#endif
 
     fprintf(stderr, "Detection Layer\n");
     srand(0);
@@ -211,39 +207,3 @@ void backward_detection_layer(const detection_layer l, network_state state)
 {
     axpy_cpu(l.batch*l.inputs, 1, l.delta, 1, state.delta, 1);
 }
-
-#ifdef GPU
-
-void forward_detection_layer_gpu(const detection_layer l, network_state state)
-{
-    if(!state.train){
-        copy_ongpu(l.batch*l.inputs, state.input, 1, l.output_gpu, 1);
-        return;
-    }
-
-    float *in_cpu = calloc(l.batch*l.inputs, sizeof(float));
-    float *truth_cpu = 0;
-    if(state.truth){
-        int num_truth = l.batch*l.side*l.side*(1+l.coords+l.classes);
-        truth_cpu = calloc(num_truth, sizeof(float));
-        cuda_pull_array(state.truth, truth_cpu, num_truth);
-    }
-    cuda_pull_array(state.input, in_cpu, l.batch*l.inputs);
-    network_state cpu_state = state;
-    cpu_state.train = state.train;
-    cpu_state.truth = truth_cpu;
-    cpu_state.input = in_cpu;
-    forward_detection_layer(l, cpu_state);
-    cuda_push_array(l.output_gpu, l.output, l.batch*l.outputs);
-    cuda_push_array(l.delta_gpu, l.delta, l.batch*l.inputs);
-    free(cpu_state.input);
-    if(cpu_state.truth) free(cpu_state.truth);
-}
-
-void backward_detection_layer_gpu(detection_layer l, network_state state)
-{
-    axpy_ongpu(l.batch*l.inputs, 1, l.delta_gpu, 1, state.delta, 1);
-    //copy_ongpu(l.batch*l.inputs, l.delta_gpu, 1, state.delta, 1);
-}
-#endif
-

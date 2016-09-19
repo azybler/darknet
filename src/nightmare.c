@@ -23,7 +23,7 @@ float abs_mean(float *x, int n)
 void calculate_loss(float *output, float *delta, int n, float thresh)
 {
     int i;
-    float mean = mean_array(output, n); 
+    float mean = mean_array(output, n);
     float var = variance_array(output, n);
     for(i = 0; i < n; ++i){
         if(delta[i] > mean + thresh*sqrt(var)) delta[i] = output[i];
@@ -53,30 +53,12 @@ void optimize_picture(network *net, image orig, int max_layer, float scale, floa
 
     network_state state = {0};
 
-#ifdef GPU
-    state.input = cuda_make_array(im.data, im.w*im.h*im.c);
-    state.delta = cuda_make_array(im.data, im.w*im.h*im.c);
-
-    forward_network_gpu(*net, state);
-    copy_ongpu(last.outputs, last.output_gpu, 1, last.delta_gpu, 1);
-
-    cuda_pull_array(last.delta_gpu, last.delta, last.outputs);
-    calculate_loss(last.delta, last.delta, last.outputs, thresh);
-    cuda_push_array(last.delta_gpu, last.delta, last.outputs);
-
-    backward_network_gpu(*net, state);
-
-    cuda_pull_array(state.delta, delta.data, im.w*im.h*im.c);
-    cuda_free(state.input);
-    cuda_free(state.delta);
-#else
     state.input = im.data;
     state.delta = delta.data;
     forward_network(*net, state);
     copy_cpu(last.outputs, last.output, 1, last.delta, 1);
     calculate_loss(last.output, last.delta, last.outputs, thresh);
     backward_network(*net, state);
-#endif
 
     if(flip) flip_image(delta);
     //normalize_array(delta.data, delta.w*delta.h*delta.c);
@@ -142,27 +124,12 @@ void reconstruct_picture(network net, float *features, image recon, image update
         image delta = make_image(recon.w, recon.h, recon.c);
 
         network_state state = {0};
-#ifdef GPU
-        state.input = cuda_make_array(recon.data, recon.w*recon.h*recon.c);
-        state.delta = cuda_make_array(delta.data, delta.w*delta.h*delta.c);
-        state.truth = cuda_make_array(features, get_network_output_size(net));
-
-        forward_network_gpu(net, state);
-        backward_network_gpu(net, state);
-
-        cuda_pull_array(state.delta, delta.data, delta.w*delta.h*delta.c);
-
-        cuda_free(state.input);
-        cuda_free(state.delta);
-        cuda_free(state.truth);
-#else
         state.input = recon.data;
         state.delta = delta.data;
         state.truth = features;
 
         forward_network(net, state);
         backward_network(net, state);
-#endif
 
         axpy_cpu(recon.w*recon.h*recon.c, 1, delta.data, 1, update.data, 1);
         smooth(recon, update, lambda, smooth_size);
@@ -260,7 +227,7 @@ void run_nightmare(int argc, char **argv)
     for(e = 0; e < rounds; ++e){
         fprintf(stderr, "Iteration: ");
         fflush(stderr);
-        for(n = 0; n < iters; ++n){  
+        for(n = 0; n < iters; ++n){
             fprintf(stderr, "%d, ", n);
             fflush(stderr);
             if(reconstruct){

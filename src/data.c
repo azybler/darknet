@@ -525,7 +525,7 @@ data load_data_compare(int n, char **paths, int m, int classes, int w, int h)
         while(fscanf(fp2, "%d %f", &id, &iou) == 2){
             if (d.y.vals[i][2*id + 1] < iou) d.y.vals[i][2*id + 1] = iou;
         }
-        
+
         for (j = 0; j < classes; ++j){
             if (d.y.vals[i][2*j] > .5 &&  d.y.vals[i][2*j+1] < .5){
                 d.y.vals[i][2*j] = 1;
@@ -552,7 +552,7 @@ data load_data_swag(char **paths, int n, int classes, float jitter)
 {
     int index = rand_r(&data_seed)%n;
     char *random_path = paths[index];
-    
+
     image orig = load_image_color(random_path, 0, 0);
     int h = orig.h;
     int w = orig.w;
@@ -655,12 +655,6 @@ data load_data_detection(int n, char **paths, int m, int w, int h, int boxes, in
 
 void *load_thread(void *ptr)
 {
-
-#ifdef GPU
-    cudaError_t status = cudaSetDevice(gpu_index);
-    check_error(status);
-#endif
-
     //printf("Loading data: %d\n", rand_r(&data_seed));
     load_args a = *(struct load_args*)ptr;
     if (a.type == OLD_CLASSIFICATION_DATA){

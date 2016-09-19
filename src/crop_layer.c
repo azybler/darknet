@@ -30,10 +30,6 @@ crop_layer make_crop_layer(int batch, int h, int w, int c, int crop_height, int 
     l.inputs = l.w * l.h * l.c;
     l.outputs = l.out_w * l.out_h * l.out_c;
     l.output = calloc(l.outputs*batch, sizeof(float));
-    #ifdef GPU
-    l.output_gpu = cuda_make_array(l.output, l.outputs*batch);
-    l.rand_gpu   = cuda_make_array(0, l.batch*8);
-    #endif
     return l;
 }
 
@@ -49,10 +45,6 @@ void resize_crop_layer(layer *l, int w, int h)
     l->outputs = l->out_h * l->out_w * l->out_c;
 
     l->output = realloc(l->output, l->batch*l->outputs*sizeof(float));
-    #ifdef GPU
-    cuda_free(l->output_gpu);
-    l->output_gpu = cuda_make_array(l->output, l->outputs*l->batch);
-    #endif
 }
 
 
@@ -80,12 +72,12 @@ void forward_crop_layer(const crop_layer l, network_state state)
             for(i = 0; i < l.out_h; ++i){
                 for(j = 0; j < l.out_w; ++j){
                     if(flip){
-                        col = l.w - dw - j - 1;    
+                        col = l.w - dw - j - 1;
                     }else{
                         col = j + dw;
                     }
                     row = i + dh;
-                    index = col+l.w*(row+l.h*(c + l.c*b)); 
+                    index = col+l.w*(row+l.h*(c + l.c*b));
                     l.output[count++] = state.input[index]*scale + trans;
                 }
             }

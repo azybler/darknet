@@ -184,20 +184,12 @@ void client_update(network net, char *address)
             read_all(fd, (char*) layer.biases, layer.n*sizeof(float));
             int num = layer.n*layer.c*layer.size*layer.size;
             read_all(fd, (char*) layer.filters, num*sizeof(float));
-
-#ifdef GPU
-            push_convolutional_layer(layer);
-            #endif
         }
         if(net.types[i] == CONNECTED){
             connected_layer layer = *(connected_layer *) net.layers[i];
 
             read_all(fd, (char *)layer.biases, layer.outputs*sizeof(float));
             read_all(fd, (char *)layer.weights, layer.outputs*layer.inputs*sizeof(float));
-
-#ifdef GPU
-            push_connected_layer(layer);
-            #endif
         }
     }
     //printf("Updated\n");

@@ -38,11 +38,7 @@ maxpool_layer make_maxpool_layer(int batch, int h, int w, int c, int size, int s
     l.indexes = calloc(output_size, sizeof(int));
     l.output =  calloc(output_size, sizeof(float));
     l.delta =   calloc(output_size, sizeof(float));
-    #ifdef GPU
-    l.indexes_gpu = cuda_make_int_array(output_size);
-    l.output_gpu  = cuda_make_array(l.output, output_size);
-    l.delta_gpu   = cuda_make_array(l.delta, output_size);
-    #endif
+
     return l;
 }
 
@@ -61,15 +57,6 @@ void resize_maxpool_layer(maxpool_layer *l, int w, int h)
     l->indexes = realloc(l->indexes, output_size * sizeof(int));
     l->output = realloc(l->output, output_size * sizeof(float));
     l->delta = realloc(l->delta, output_size * sizeof(float));
-
-    #ifdef GPU
-    cuda_free((float *)l->indexes_gpu);
-    cuda_free(l->output_gpu);
-    cuda_free(l->delta_gpu);
-    l->indexes_gpu = cuda_make_int_array(output_size);
-    l->output_gpu  = cuda_make_array(l->output, output_size);
-    l->delta_gpu   = cuda_make_array(l->delta,  output_size);
-    #endif
 }
 
 void forward_maxpool_layer(const maxpool_layer l, network_state state)

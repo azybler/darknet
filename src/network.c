@@ -38,9 +38,6 @@ void reset_momentum(network net)
     net.learning_rate = 0;
     net.momentum = 0;
     net.decay = 0;
-    #ifdef GPU
-        if(gpu_index >= 0) update_network_gpu(net);
-    #endif
 }
 
 float get_current_rate(network net)
@@ -129,10 +126,6 @@ network make_network(int n)
     net.n = n;
     net.layers = calloc(net.n, sizeof(layer));
     net.seen = calloc(1, sizeof(int));
-    #ifdef GPU
-    net.input_gpu = calloc(1, sizeof(float *));
-    net.truth_gpu = calloc(1, sizeof(float *));
-    #endif
     return net;
 }
 
@@ -216,9 +209,6 @@ void update_network(network net)
 
 float *get_network_output(network net)
 {
-    #ifdef GPU
-        return get_network_output_gpu(net);
-    #endif 
     int i;
     for(i = net.n-1; i > 0; --i) if(net.layers[i].type != COST) break;
     return net.layers[i].output;
@@ -309,9 +299,7 @@ void backward_network(network net, network_state state)
 float train_network_datum(network net, float *x, float *y)
 {
     *net.seen += net.batch;
-#ifdef GPU
-    if(gpu_index >= 0) return train_network_datum_gpu(net, x, y);
-#endif
+
     network_state state;
     state.index = 0;
     state.net = net;
@@ -393,11 +381,6 @@ void set_batch_network(network *net, int b)
     int i;
     for(i = 0; i < net->n; ++i){
         net->layers[i].batch = b;
-        #ifdef CUDNN
-        if(net->layers[i].type == CONVOLUTIONAL){
-            cudnn_convolutional_setup(net->layers + i);
-        }
-        #endif
     }
 }
 
@@ -435,13 +418,10 @@ int resize_network(network *net, int w, int h)
         h = l.out_h;
         if(l.type == AVGPOOL) break;
     }
-#ifdef GPU
-        cuda_free(net->workspace);
-        net->workspace = cuda_make_array(0, (workspace_size-1)/sizeof(float)+1);
-#else
-        free(net->workspace);
-        net->workspace = calloc(1, workspace_size);
-#endif
+
+    free(net->workspace);
+    net->workspace = calloc(1, workspace_size);
+
     //fprintf(stderr, " Done!\n");
     return 0;
 }
@@ -503,7 +483,7 @@ void visualize_network(network net)
         if(l.type == CONVOLUTIONAL){
             prev = visualize_convolutional_layer(l, buff, prev);
         }
-    } 
+    }
 }
 
 void top_predictions(network net, int k, int *index)
@@ -516,10 +496,6 @@ void top_predictions(network net, int k, int *index)
 
 float *network_predict(network net, float *input)
 {
-#ifdef GPU
-    if(gpu_index >= 0)  return network_predict_gpu(net, input);
-#endif
-
     network_state state;
     state.net = net;
     state.index = 0;
@@ -554,7 +530,7 @@ matrix network_predict_data_multi(network net, data test, int n)
         }
     }
     free(X);
-    return pred;   
+    return pred;
 }
 
 matrix network_predict_data(network net, data test)
@@ -577,7 +553,7 @@ matrix network_predict_data(network net, data test)
         }
     }
     free(X);
-    return pred;   
+    return pred;
 }
 
 void print_network(network net)
@@ -619,7 +595,7 @@ void compare_networks(network n1, network n2, data test)
     printf("%5d %5d\n%5d %5d\n", a, b, c, d);
     float num = pow((abs(b - c) - 1.), 2.);
     float den = b + c;
-    printf("%f\n", num/den); 
+    printf("%f\n", num/den);
 }
 
 float network_accuracy(network net, data d)
@@ -656,10 +632,4 @@ void free_network(network net)
         free_layer(net.layers[i]);
     }
     free(net.layers);
-    #ifdef GPU
-    if(*net.input_gpu) cuda_free(*net.input_gpu);
-    if(*net.truth_gpu) cuda_free(*net.truth_gpu);
-    if(net.input_gpu) free(net.input_gpu);
-    if(net.truth_gpu) free(net.truth_gpu);
-    #endif
 }

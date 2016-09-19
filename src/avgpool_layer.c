@@ -19,10 +19,6 @@ avgpool_layer make_avgpool_layer(int batch, int w, int h, int c)
     int output_size = l.outputs * batch;
     l.output =  calloc(output_size, sizeof(float));
     l.delta =   calloc(output_size, sizeof(float));
-    #ifdef GPU
-    l.output_gpu  = cuda_make_array(l.output, output_size);
-    l.delta_gpu   = cuda_make_array(l.delta, output_size);
-    #endif
     return l;
 }
 

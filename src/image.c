@@ -305,7 +305,7 @@ void show_image_cv(image p, const char *name)
 
     IplImage *disp = cvCreateImage(cvSize(p.w,p.h), IPL_DEPTH_8U, p.c);
     int step = disp->widthStep;
-    cvNamedWindow(buff, CV_WINDOW_NORMAL); 
+    cvNamedWindow(buff, CV_WINDOW_NORMAL);
     //cvMoveWindow(buff, 100*(windows%10) + 200*(windows/10), 100*(windows%10));
     ++windows;
     for(y = 0; y < p.h; ++y){
@@ -721,7 +721,7 @@ image blend_image(image fore, image back, float alpha)
     for(k = 0; k < fore.c; ++k){
         for(j = 0; j < fore.h; ++j){
             for(i = 0; i < fore.w; ++i){
-                float val = alpha * get_pixel(fore, i, j, k) + 
+                float val = alpha * get_pixel(fore, i, j, k) +
                     (1 - alpha)* get_pixel(back, i, j, k);
                 set_pixel(blend, i, j, k, val);
             }
@@ -803,8 +803,8 @@ float bilinear_interpolate(image im, float x, float y, int c)
     float dx = x - ix;
     float dy = y - iy;
 
-    float val = (1-dy) * (1-dx) * get_pixel_extend(im, ix, iy, c) + 
-        dy     * (1-dx) * get_pixel_extend(im, ix, iy+1, c) + 
+    float val = (1-dy) * (1-dx) * get_pixel_extend(im, ix, iy, c) +
+        dy     * (1-dx) * get_pixel_extend(im, ix, iy+1, c) +
         (1-dy) *   dx   * get_pixel_extend(im, ix+1, iy, c) +
         dy     *   dx   * get_pixel_extend(im, ix+1, iy+1, c);
     return val;
@@ -812,7 +812,7 @@ float bilinear_interpolate(image im, float x, float y, int c)
 
 image resize_image(image im, int w, int h)
 {
-    image resized = make_image(w, h, im.c);   
+    image resized = make_image(w, h, im.c);
     image part = make_image(w, im.h, im.c);
     int r, c, k;
     float w_scale = (float)(im.w - 1) / (w - 1);
@@ -876,25 +876,6 @@ void test_resize(char *filename)
     exposure_image(exp5, .5);
 
     image bin = binarize_image(im);
-
-#ifdef GPU
-    image r = resize_image(im, im.w, im.h);
-    image black = make_image(im.w*2 + 3, im.h*2 + 3, 9);
-    image black2 = make_image(im.w, im.h, 3);
-
-    float *r_gpu = cuda_make_array(r.data, r.w*r.h*r.c);
-    float *black_gpu = cuda_make_array(black.data, black.w*black.h*black.c);
-    float *black2_gpu = cuda_make_array(black2.data, black2.w*black2.h*black2.c);
-    shortcut_gpu(3, r.w, r.h, 1, r_gpu, black.w, black.h, 3, black_gpu);
-    //flip_image(r);
-    //shortcut_gpu(3, r.w, r.h, 1, r.data, black.w, black.h, 3, black.data);
-
-    shortcut_gpu(3, black.w, black.h, 3, black_gpu, black2.w, black2.h, 1, black2_gpu);
-    cuda_pull_array(black_gpu, black.data, black.w*black.h*black.c);
-    cuda_pull_array(black2_gpu, black2.data, black2.w*black2.h*black2.c);
-    show_image_layers(black, "Black");
-    show_image(black2, "Recreate");
-#endif
 
     show_image(im,   "Original");
     show_image(bin,  "Binary");
@@ -1084,7 +1065,7 @@ image collapse_images_vert(image *ims, int n)
         free_image(copy);
     }
     return filters;
-} 
+}
 
 image collapse_images_horz(image *ims, int n)
 {
@@ -1120,7 +1101,7 @@ image collapse_images_horz(image *ims, int n)
         free_image(copy);
     }
     return filters;
-} 
+}
 
 void show_image_normalized(image im, const char *name)
 {

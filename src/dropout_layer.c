@@ -15,20 +15,12 @@ dropout_layer make_dropout_layer(int batch, int inputs, float probability)
     l.batch = batch;
     l.rand = calloc(inputs*batch, sizeof(float));
     l.scale = 1./(1.-probability);
-    #ifdef GPU
-    l.rand_gpu = cuda_make_array(l.rand, inputs*batch);
-    #endif
     return l;
-} 
+}
 
 void resize_dropout_layer(dropout_layer *l, int inputs)
 {
     l->rand = realloc(l->rand, l->inputs*l->batch*sizeof(float));
-    #ifdef GPU
-    cuda_free(l->rand_gpu);
-
-    l->rand_gpu = cuda_make_array(l->rand, inputs*l->batch);
-    #endif
 }
 
 void forward_dropout_layer(dropout_layer l, network_state state)

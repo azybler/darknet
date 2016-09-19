@@ -60,7 +60,6 @@ struct layer{
     int sqrt;
     int flip;
     int index;
-    int binary;
     int xnor;
     int steps;
     int hidden;
@@ -171,68 +170,6 @@ struct layer{
     float *binary_input;
 
     size_t workspace_size;
-
-    #ifdef GPU
-    float *z_gpu;
-    float *r_gpu;
-    float *h_gpu;
-
-    int *indexes_gpu;
-    float * prev_state_gpu;
-    float * forgot_state_gpu;
-    float * forgot_delta_gpu;
-    float * state_gpu;
-    float * state_delta_gpu;
-    float * gate_gpu;
-    float * gate_delta_gpu;
-    float * save_gpu;
-    float * save_delta_gpu;
-    float * concat_gpu;
-    float * concat_delta_gpu;
-    float * filters_gpu;
-    float * filter_updates_gpu;
-
-    float *binary_input_gpu;
-    float *binary_filters_gpu;
-
-    float * mean_gpu;
-    float * variance_gpu;
-
-    float * rolling_mean_gpu;
-    float * rolling_variance_gpu;
-
-    float * variance_delta_gpu;
-    float * mean_delta_gpu;
-
-    float * col_image_gpu;
-
-    float * x_gpu;
-    float * x_norm_gpu;
-    float * weights_gpu;
-    float * weight_updates_gpu;
-
-    float * biases_gpu;
-    float * bias_updates_gpu;
-
-    float * scales_gpu;
-    float * scale_updates_gpu;
-
-    float * output_gpu;
-    float * delta_gpu;
-    float * rand_gpu;
-    float * squared_gpu;
-    float * norms_gpu;
-    #ifdef CUDNN
-    cudnnTensorDescriptor_t srcTensorDesc, dstTensorDesc;
-    cudnnTensorDescriptor_t dsrcTensorDesc, ddstTensorDesc;
-    cudnnFilterDescriptor_t filterDesc;
-    cudnnFilterDescriptor_t dfilterDesc;
-    cudnnConvolutionDescriptor_t convDesc;
-    cudnnConvolutionFwdAlgo_t fw_algo;
-    cudnnConvolutionBwdDataAlgo_t bd_algo;
-    cudnnConvolutionBwdFilterAlgo_t bf_algo;
-    #endif
-    #endif
 };
 
 void free_layer(layer);

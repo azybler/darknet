@@ -50,13 +50,13 @@ void average(int argc, char *argv[])
     network net = parse_network_cfg(cfgfile);
     network sum = parse_network_cfg(cfgfile);
 
-    char *weightfile = argv[4];   
+    char *weightfile = argv[4];
     load_weights(&sum, weightfile);
 
     int i, j;
     int n = argc - 5;
     for(i = 0; i < n; ++i){
-        weightfile = argv[i+5];   
+        weightfile = argv[i+5];
         load_weights(&net, weightfile);
         for(j = 0; j < net.n; ++j){
             layer l = net.layers[j];
@@ -250,14 +250,7 @@ int main(int argc, char **argv)
         gpu_index = -1;
     }
 
-#ifndef GPU
     gpu_index = -1;
-#else
-    if(gpu_index >= 0){
-        cudaError_t status = cudaSetDevice(gpu_index);
-        check_error(status);
-    }
-#endif
 
     if(0==strcmp(argv[1], "imagenet")){
         run_imagenet(argc, argv);
