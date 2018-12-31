@@ -42,14 +42,96 @@ float *get_regression_values(char **labels, int n)
     return v;
 }
 
+float get_test_score(char *label_list, char *valid_list, int classes, char *cfgfile, char *weightfile)
+{
+    int i, j;
+    network net = parse_network_cfg_custom(cfgfile, 1);
+    if (weightfile)
+    {
+        load_weights(&net, weightfile);
+    }
+
+    set_batch_network(&net, 1);
+    srand(time(0));
+
+    int topk = 2;
+    if (topk > classes)
+        topk = classes;
+
+    char **labels = get_labels(label_list);
+    list *plist = get_paths(valid_list);
+
+    char **paths = (char **)list_to_array(plist);
+    int m = plist->size;
+    free_list(plist);
+
+    float avg_acc = 0;
+    float avg_topk = 0;
+    int *indexes = calloc(topk, sizeof(int));
+
+    for (i = 0; i < m; ++i)
+    {
+        // printf("[get_test_loss] i = %d\n", i);
+
+        int class_id = -1;
+        char *path = paths[i];
+        for (j = 0; j < classes; ++j)
+        {
+            if (strstr(path, labels[j]))
+            {
+                class_id = j;
+                break;
+            }
+        }
+
+        // printf("[get_test_loss] class_id = %d\n", class_id);
+
+        // printf("[get_test_loss] paths[i] = %s\n", paths[i]);
+        // printf("[get_test_loss] net.w = %d\n", net.w);
+        // printf("[get_test_loss] net.h = %d\n", net.h);
+
+        image im = load_image_color(paths[i], 0, 0);
+
+        // printf("[get_test_loss] im.data = %f %f ...\n", im.data[0], im.data[1]);
+
+        image resized = resize_min(im, net.w);
+        image crop = crop_image(resized, (resized.w - net.w) / 2, (resized.h - net.h) / 2, net.w, net.h);
+        // show_image(im, "orig");
+        // show_image(crop, "cropped");
+        // cvWaitKey(0);
+        float *pred = network_predict(net, im.data);
+
+        // printf("[get_test_loss] pred = %f %f ...\n", pred[0], pred[1]);
+
+        if (net.hierarchy)
+            hierarchy_predictions(pred, net.outputs, net.hierarchy, 1);
+
+        if (resized.data != im.data)
+            free_image(resized);
+        free_image(im);
+        free_image(crop);
+        top_k(pred, classes, topk, indexes);
+
+        if (indexes[0] == class_id)
+            avg_acc += 1;
+        for (j = 0; j < topk; ++j)
+        {
+            if (indexes[j] == class_id)
+                avg_topk += 1;
+        }
+    }
+
+    return avg_acc / (i + 1);
+}
+
 void train_classifier(char *datacfg, char *cfgfile, char *weightfile, int *gpus, int ngpus, int clear, int dont_show)
 {
     int i;
 
     float avg_loss = -1;
     char *base = basecfg(cfgfile);
-    printf("%s\n", base);
-    printf("%d\n", ngpus);
+    printf("base = %s\n", base);
+    printf("ngpus = %d\n", ngpus);
     network *nets = calloc(ngpus, sizeof(network));
 
     srand(time(0));
@@ -80,6 +162,7 @@ void train_classifier(char *datacfg, char *cfgfile, char *weightfile, int *gpus,
     char *backup_directory = option_find_str(options, "backup", "/backup/");
     char *label_list = option_find_str(options, "labels", "data/labels.list");
     char *train_list = option_find_str(options, "train", "data/train.list");
+    char *valid_list = option_find_str(options, "valid", "data/train.list");
     int classes = option_find_int(options, "classes", 2);
 
     char **labels = get_labels(label_list);
@@ -128,6 +211,8 @@ void train_classifier(char *datacfg, char *cfgfile, char *weightfile, int *gpus,
     args.d = &buffer;
     load_thread = load_data(args);
 
+    float current_max_test_score = -1;
+
     int iter_save = get_current_batch(net);
     while (get_current_batch(net) < net.max_batches || net.max_batches == 0)
     {
@@ -153,6 +238,7 @@ void train_classifier(char *datacfg, char *cfgfile, char *weightfile, int *gpus,
 #else
         loss = train_network(net, train);
 #endif
+
         if (avg_loss == -1)
             avg_loss = loss;
         avg_loss = avg_loss * .9 + loss * .1;
@@ -167,6 +253,8 @@ void train_classifier(char *datacfg, char *cfgfile, char *weightfile, int *gpus,
 
         if (i >= (iter_save + 100))
         {
+            printf("saving...");
+
             iter_save = i;
 #ifdef GPU
             if (ngpus != 1)
@@ -175,16 +263,24 @@ void train_classifier(char *datacfg, char *cfgfile, char *weightfile, int *gpus,
             char buff[256];
             sprintf(buff, "%s/%s_%d.weights", backup_directory, base, i);
             save_weights(net, buff);
+
+            float test_score = get_test_score(label_list, valid_list, classes, cfgfile, buff);
+            printf("test_score: %lf\n", test_score);
+
+            if (test_score > current_max_test_score)
+            {
+                current_max_test_score = test_score;
+#ifdef GPU
+                if (ngpus != 1)
+                    sync_nets(nets, ngpus, 0);
+#endif
+                char buff2[256];
+                sprintf(buff2, "%s/%s_%lf_%d.weights", backup_directory, base, test_score, i);
+                save_weights(net, buff2);
+            }
         }
         free_data(train);
     }
-#ifdef GPU
-    if (ngpus != 1)
-        sync_nets(nets, ngpus, 0);
-#endif
-    char buff[256];
-    sprintf(buff, "%s/%s_final.weights", backup_directory, base);
-    save_weights(net, buff);
 
 #ifdef OPENCV
     cvReleaseImage(&img);
@@ -197,117 +293,6 @@ void train_classifier(char *datacfg, char *cfgfile, char *weightfile, int *gpus,
     free_list(plist);
     free(base);
 }
-
-/*
-   void train_classifier(char *datacfg, char *cfgfile, char *weightfile, int clear)
-   {
-   srand(time(0));
-   float avg_loss = -1;
-   char *base = basecfg(cfgfile);
-   printf("%s\n", base);
-   network net = parse_network_cfg(cfgfile);
-   if(weightfile){
-   load_weights(&net, weightfile);
-   }
-   if(clear) *net.seen = 0;
-
-   int imgs = net.batch * net.subdivisions;
-
-   printf("Learning Rate: %g, Momentum: %g, Decay: %g\n", net.learning_rate, net.momentum, net.decay);
-   list *options = read_data_cfg(datacfg);
-
-   char *backup_directory = option_find_str(options, "backup", "/backup/");
-   char *label_list = option_find_str(options, "labels", "data/labels.list");
-   char *train_list = option_find_str(options, "train", "data/train.list");
-   int classes = option_find_int(options, "classes", 2);
-
-   char **labels = get_labels(label_list);
-   list *plist = get_paths(train_list);
-   char **paths = (char **)list_to_array(plist);
-   printf("%d\n", plist->size);
-   int N = plist->size;
-   clock_t time;
-
-   load_args args = {0};
-   args.w = net.w;
-   args.h = net.h;
-   args.threads = 8;
-
-   args.min = net.min_crop;
-   args.max = net.max_crop;
-   args.flip = net.flip;
-   args.angle = net.angle;
-   args.aspect = net.aspect;
-   args.exposure = net.exposure;
-   args.saturation = net.saturation;
-   args.hue = net.hue;
-   args.size = net.w;
-   args.hierarchy = net.hierarchy;
-
-   args.paths = paths;
-   args.classes = classes;
-   args.n = imgs;
-   args.m = N;
-   args.labels = labels;
-   args.type = CLASSIFICATION_DATA;
-
-   data train;
-   data buffer;
-   pthread_t load_thread;
-   args.d = &buffer;
-   load_thread = load_data(args);
-
-   int epoch = (*net.seen)/N;
-   while(get_current_batch(net) < net.max_batches || net.max_batches == 0){
-   time=clock();
-
-   pthread_join(load_thread, 0);
-   train = buffer;
-   load_thread = load_data(args);
-
-   printf("Loaded: %lf seconds\n", sec(clock()-time));
-   time=clock();
-
-#ifdef OPENCV
-if(0){
-int u;
-for(u = 0; u < imgs; ++u){
-    image im = float_to_image(net.w, net.h, 3, train.X.vals[u]);
-    show_image(im, "loaded");
-    cvWaitKey(0);
-}
-}
-#endif
-
-float loss = train_network(net, train);
-free_data(train);
-
-if(avg_loss == -1) avg_loss = loss;
-avg_loss = avg_loss*.9 + loss*.1;
-printf("%d, %.3f: %f, %f avg, %f rate, %lf seconds, %d images\n", get_current_batch(net), (float)(*net.seen)/N, loss, avg_loss, get_current_rate(net), sec(clock()-time), *net.seen);
-if(*net.seen/N > epoch){
-    epoch = *net.seen/N;
-    char buff[256];
-    sprintf(buff, "%s/%s_%d.weights",backup_directory,base, epoch);
-    save_weights(net, buff);
-}
-if(get_current_batch(net)%100 == 0){
-    char buff[256];
-    sprintf(buff, "%s/%s.backup",backup_directory,base);
-    save_weights(net, buff);
-}
-}
-char buff[256];
-sprintf(buff, "%s/%s.weights", backup_directory, base);
-save_weights(net, buff);
-
-free_network(net);
-free_ptrs((void**)labels, classes);
-free_ptrs((void**)paths, plist->size);
-free_list(plist);
-free(base);
-}
-*/
 
 void validate_classifier_crop(char *datacfg, char *filename, char *weightfile)
 {
@@ -534,10 +519,10 @@ void validate_classifier_full(char *datacfg, char *filename, char *weightfile)
     }
 }
 
-void validate_classifier_single(char *datacfg, char *filename, char *weightfile)
+void validate_classifier_single(char *datacfg, char *cfgfile, char *weightfile)
 {
     int i, j;
-    network net = parse_network_cfg_custom(filename, 1);
+    network net = parse_network_cfg_custom(cfgfile, 1);
     if (weightfile)
     {
         load_weights(&net, weightfile);
@@ -568,8 +553,15 @@ void validate_classifier_single(char *datacfg, char *filename, char *weightfile)
     float avg_topk = 0;
     int *indexes = calloc(topk, sizeof(int));
 
+    // printf("[validate_classifier_single] label_list = %s\n", label_list);
+    // printf("[validate_classifier_single] valid_list = %s\n", valid_list);
+    // printf("[validate_classifier_single] classes = %d\n", classes);
+    // printf("[validate_classifier_single] topk = %d\n", topk);
+
     for (i = 0; i < m; ++i)
     {
+        // printf("[validate_classifier_single] i = %d\n", i);
+
         int class_id = -1;
         char *path = paths[i];
         for (j = 0; j < classes; ++j)
@@ -580,13 +572,26 @@ void validate_classifier_single(char *datacfg, char *filename, char *weightfile)
                 break;
             }
         }
+
+        // printf("[validate_classifier_single] class_id = %d\n", class_id);
+
+        // printf("[validate_classifier_single] paths[i] = %s\n", paths[i]);
+        // printf("[validate_classifier_single] net.w = %d\n", net.w);
+        // printf("[validate_classifier_single] net.h = %d\n", net.h);
+
         image im = load_image_color(paths[i], 0, 0);
+
+        // printf("[validate_classifier_single] im.data = %f %f ...\n", im.data[0], im.data[1]);
+
         image resized = resize_min(im, net.w);
         image crop = crop_image(resized, (resized.w - net.w) / 2, (resized.h - net.h) / 2, net.w, net.h);
         //show_image(im, "orig");
         //show_image(crop, "cropped");
         //cvWaitKey(0);
         float *pred = network_predict(net, crop.data);
+
+        // printf("[validate_classifier_single] pred = %f %f ...\n", pred[0], pred[1]);
+
         if (net.hierarchy)
             hierarchy_predictions(pred, net.outputs, net.hierarchy, 1);
 
@@ -608,10 +613,10 @@ void validate_classifier_single(char *datacfg, char *filename, char *weightfile)
     }
 }
 
-void validate_classifier_multi(char *datacfg, char *filename, char *weightfile)
+void validate_classifier_multi(char *datacfg, char *cfgfile, char *weightfile)
 {
     int i, j;
-    network net = parse_network_cfg(filename);
+    network net = parse_network_cfg(cfgfile);
     set_batch_network(&net, 1);
     if (weightfile)
     {
