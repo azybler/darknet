@@ -26,3 +26,7 @@ Icon?
 Thumbs.db
 *.swp
 *.weights
+
+# Binaries
+libdarknet.a
+libdarknet.so
