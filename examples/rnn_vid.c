@@ -2,12 +2,12 @@
 
 #ifdef OPENCV
 image get_image_from_stream(CvCapture *cap);
-image ipl_to_image(IplImage* src);
+image ipl_to_image(IplImage *src);
 
 void reconstruct_picture(network net, float *features, image recon, image update, float rate, float momentum, float lambda, int smooth_size, int iters);
 
-
-typedef struct {
+typedef struct
+{
     float *x;
     float *y;
 } float_pair;
@@ -17,17 +17,19 @@ float_pair get_rnn_vid_data(network net, char **files, int n, int batch, int ste
     int b;
     assert(net.batch == steps + 1);
     image out_im = get_network_image(net);
-    int output_size = out_im.w*out_im.h*out_im.c;
+    int output_size = out_im.w * out_im.h * out_im.c;
     printf("%d %d %d\n", out_im.w, out_im.h, out_im.c);
-    float *feats = calloc(net.batch*batch*output_size, sizeof(float));
-    for(b = 0; b < batch; ++b){
-        int input_size = net.w*net.h*net.c;
-        float *input = calloc(input_size*net.batch, sizeof(float));
-        char *filename = files[rand()%n];
+    float *feats = calloc(net.batch * batch * output_size, sizeof(float));
+    for (b = 0; b < batch; ++b)
+    {
+        int input_size = net.w * net.h * net.c;
+        float *input = calloc(input_size * net.batch, sizeof(float));
+        char *filename = files[rand() % n];
         CvCapture *cap = cvCaptureFromFile(filename);
         int frames = cvGetCaptureProperty(cap, CV_CAP_PROP_FRAME_COUNT);
         int index = rand() % (frames - steps - 2);
-        if (frames < (steps + 4)){
+        if (frames < (steps + 4))
+        {
             --b;
             free(input);
             continue;
@@ -37,14 +39,15 @@ float_pair get_rnn_vid_data(network net, char **files, int n, int batch, int ste
         cvSetCaptureProperty(cap, CV_CAP_PROP_POS_FRAMES, index);
 
         int i;
-        for(i = 0; i < net.batch; ++i){
-            IplImage* src = cvQueryFrame(cap);
+        for (i = 0; i < net.batch; ++i)
+        {
+            IplImage *src = cvQueryFrame(cap);
             image im = ipl_to_image(src);
             rgbgr_image(im);
             image re = resize_image(im, net.w, net.h);
             //show_image(re, "loaded");
             //cvWaitKey(10);
-            memcpy(input + i*input_size, re.data, input_size*sizeof(float));
+            memcpy(input + i * input_size, re.data, input_size * sizeof(float));
             free_image(im);
             free_image(re);
         }
@@ -52,8 +55,9 @@ float_pair get_rnn_vid_data(network net, char **files, int n, int batch, int ste
 
         free(input);
 
-        for(i = 0; i < net.batch; ++i){
-            memcpy(feats + (b + i*batch)*output_size, output + i*output_size, output_size*sizeof(float));
+        for (i = 0; i < net.batch; ++i)
+        {
+            memcpy(feats + (b + i * batch) * output_size, output + i * output_size, output_size * sizeof(float));
         }
 
         cvReleaseCapture(&cap);
@@ -62,11 +66,10 @@ float_pair get_rnn_vid_data(network net, char **files, int n, int batch, int ste
     //printf("%d %d %d\n", out_im.w, out_im.h, out_im.c);
     float_pair p = {0};
     p.x = feats;
-    p.y = feats + output_size*batch; //+ out_im.w*out_im.h*out_im.c;
+    p.y = feats + output_size * batch; //+ out_im.w*out_im.h*out_im.c;
 
     return p;
 }
-
 
 void train_vid_rnn(char *cfgfile, char *weightfile)
 {
@@ -77,12 +80,13 @@ void train_vid_rnn(char *cfgfile, char *weightfile)
     printf("%s\n", base);
     float avg_loss = -1;
     network net = parse_network_cfg(cfgfile);
-    if(weightfile){
+    if (weightfile)
+    {
         load_weights(&net, weightfile);
     }
     printf("Learning Rate: %g, Momentum: %g, Decay: %g\n", net.learning_rate, net.momentum, net.decay);
-    int imgs = net.batch*net.subdivisions;
-    int i = *net.seen/imgs;
+    int imgs = net.batch * net.subdivisions;
+    int i = *net.seen / imgs;
 
     list *plist = get_paths(train_videos);
     int N = plist->size;
@@ -94,27 +98,30 @@ void train_vid_rnn(char *cfgfile, char *weightfile)
     network extractor = parse_network_cfg("cfg/extractor.cfg");
     load_weights(&extractor, "/home/pjreddie/trained/yolo-coco.conv");
 
-    while(get_current_batch(net) < net.max_batches){
+    while (get_current_batch(net) < net.max_batches)
+    {
         i += 1;
-        time=clock();
+        time = clock();
         float_pair p = get_rnn_vid_data(extractor, paths, N, batch, steps);
 
-        copy_cpu(net.inputs*net.batch, p.x, 1, net.input, 1);
-        copy_cpu(net.truths*net.batch, p.y, 1, net.truth, 1);
+        copy_cpu(net.inputs * net.batch, p.x, 1, net.input, 1);
+        copy_cpu(net.truths * net.batch, p.y, 1, net.truth, 1);
         float loss = train_network_datum(net) / (net.batch);
 
-
         free(p.x);
-        if (avg_loss < 0) avg_loss = loss;
-        avg_loss = avg_loss*.9 + loss*.1;
+        if (avg_loss < 0)
+            avg_loss = loss;
+        avg_loss = avg_loss * .9 + loss * .1;
 
-        fprintf(stderr, "%d: %f, %f avg, %f rate, %lf seconds\n", i, loss, avg_loss, get_current_rate(net), sec(clock()-time));
-        if(i%100==0){
+        fprintf(stderr, "%d: %f, %f avg, %f rate, %lf seconds\n", i, loss, avg_loss, get_current_rate(net), sec(clock() - time));
+        if (i % 100 == 0)
+        {
             char buff[256];
             sprintf(buff, "%s/%s_%d.weights", backup_directory, base, i);
             save_weights(net, buff);
         }
-        if(i%10==0){
+        if (i % 10 == 0)
+        {
             char buff[256];
             sprintf(buff, "%s/%s.backup", backup_directory, base);
             save_weights(net, buff);
@@ -125,13 +132,15 @@ void train_vid_rnn(char *cfgfile, char *weightfile)
     save_weights(net, buff);
 }
 
-
 image save_reconstruction(network net, image *init, float *feat, char *name, int i)
 {
     image recon;
-    if (init) {
+    if (init)
+    {
         recon = copy_image(*init);
-    } else {
+    }
+    else
+    {
         recon = make_random_image(net.w, net.h, 3);
     }
 
@@ -150,7 +159,8 @@ void generate_vid_rnn(char *cfgfile, char *weightfile)
     load_weights(&extractor, "/home/pjreddie/trained/yolo-coco.conv");
 
     network net = parse_network_cfg(cfgfile);
-    if(weightfile){
+    if (weightfile)
+    {
         load_weights(&net, weightfile);
     }
     set_batch_network(&extractor, 1);
@@ -161,16 +171,18 @@ void generate_vid_rnn(char *cfgfile, char *weightfile)
     float *feat;
     float *next;
     image last;
-    for(i = 0; i < 25; ++i){
+    for (i = 0; i < 25; ++i)
+    {
         image im = get_image_from_stream(cap);
         image re = resize_image(im, extractor.w, extractor.h);
         feat = network_predict(extractor, re.data);
-        if(i > 0){
-            printf("%f %f\n", mean_array(feat, 14*14*512), variance_array(feat, 14*14*512));
-            printf("%f %f\n", mean_array(next, 14*14*512), variance_array(next, 14*14*512));
-            printf("%f\n", mse_array(feat, 14*14*512));
-            axpy_cpu(14*14*512, -1, feat, 1, next, 1);
-            printf("%f\n", mse_array(next, 14*14*512));
+        if (i > 0)
+        {
+            printf("%f %f\n", mean_array(feat, 14 * 14 * 512), variance_array(feat, 14 * 14 * 512));
+            printf("%f %f\n", mean_array(next, 14 * 14 * 512), variance_array(next, 14 * 14 * 512));
+            printf("%f\n", mse_array(feat, 14 * 14 * 512));
+            axpy_cpu(14 * 14 * 512, -1, feat, 1, next, 1);
+            printf("%f\n", mse_array(next, 14 * 14 * 512));
         }
         next = network_predict(net, feat);
 
@@ -178,10 +190,12 @@ void generate_vid_rnn(char *cfgfile, char *weightfile)
 
         free_image(save_reconstruction(extractor, 0, feat, "feat", i));
         free_image(save_reconstruction(extractor, 0, next, "next", i));
-        if (i==24) last = copy_image(re);
+        if (i == 24)
+            last = copy_image(re);
         free_image(re);
     }
-    for(i = 0; i < 30; ++i){
+    for (i = 0; i < 30; ++i)
+    {
         next = network_predict(net, next);
         image new = save_reconstruction(extractor, &last, next, "new", i);
         free_image(last);
@@ -191,7 +205,8 @@ void generate_vid_rnn(char *cfgfile, char *weightfile)
 
 void run_vid_rnn(int argc, char **argv)
 {
-    if(argc < 4){
+    if (argc < 4)
+    {
         fprintf(stderr, "usage: %s %s [train/test/valid] [cfg] [weights (optional)]\n", argv[0], argv[1]);
         return;
     }
@@ -199,10 +214,11 @@ void run_vid_rnn(int argc, char **argv)
     char *cfg = argv[3];
     char *weights = (argc > 4) ? argv[4] : 0;
     //char *filename = (argc > 5) ? argv[5]: 0;
-    if(0==strcmp(argv[2], "train")) train_vid_rnn(cfg, weights);
-    else if(0==strcmp(argv[2], "generate")) generate_vid_rnn(cfg, weights);
+    if (0 == strcmp(argv[2], "train"))
+        train_vid_rnn(cfg, weights);
+    else if (0 == strcmp(argv[2], "generate"))
+        generate_vid_rnn(cfg, weights);
 }
 #else
-void run_vid_rnn(int argc, char **argv){}
+void run_vid_rnn(int argc, char **argv) {}
 #endif
-

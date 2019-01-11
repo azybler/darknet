@@ -10,15 +10,17 @@ void demo_art(char *cfgfile, char *weightfile, int cam_index)
 
     srand(2222222);
 
-    void * cap = open_video_stream(0, cam_index, 0,0,0);
+    void *cap = open_video_stream(0, cam_index, 0, 0, 0);
 
     char *window = "ArtJudgementBot9000!!!";
-    if(!cap) error("Couldn't connect to webcam.\n");
+    if (!cap)
+        error("Couldn't connect to webcam.\n");
     int i;
     int idx[] = {37, 401, 434};
-    int n = sizeof(idx)/sizeof(idx[0]);
+    int n = sizeof(idx) / sizeof(idx[0]);
 
-    while(1){
+    while (1)
+    {
         image in = get_image_from_stream(cap);
         image in_s = resize_image(in, net->w, net->h);
 
@@ -28,16 +30,19 @@ void demo_art(char *cfgfile, char *weightfile, int cam_index)
         printf("\033[1;1H");
 
         float score = 0;
-        for(i = 0; i < n; ++i){
+        for (i = 0; i < n; ++i)
+        {
             float s = p[idx[i]];
-            if (s > score) score = s;
+            if (s > score)
+                score = s;
         }
         score = score;
-        printf("I APPRECIATE THIS ARTWORK: %10.7f%%\n", score*100);
+        printf("I APPRECIATE THIS ARTWORK: %10.7f%%\n", score * 100);
         printf("[");
-	int upper = 30;
-        for(i = 0; i < upper; ++i){
-            printf("%c", ((i+.5) < score*upper) ? 219 : ' ');
+        int upper = 30;
+        for (i = 0; i < upper; ++i)
+        {
+            printf("%c", ((i + .5) < score * upper) ? 219 : ' ');
         }
         printf("]\n");
 
@@ -48,7 +53,6 @@ void demo_art(char *cfgfile, char *weightfile, int cam_index)
 #endif
 }
 
-
 void run_art(int argc, char **argv)
 {
     int cam_index = find_int_arg(argc, argv, "-c", 0);
@@ -56,4 +60,3 @@ void run_art(int argc, char **argv)
     char *weights = argv[3];
     demo_art(cfg, weights, cam_index);
 }
-
