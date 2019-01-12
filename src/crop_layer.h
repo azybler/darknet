@@ -17,4 +17,3 @@ void forward_crop_layer_gpu(crop_layer l, network net);
 #endif
 
 #endif
-

@@ -48,7 +48,7 @@ __device__ float stair_activate_kernel(float x)
     if (n%2 == 0) return floorf(x/2);
     else return (x - n) + floorf(x/2);
 }
- 
+
 
 __device__ float hardtan_gradient_kernel(float x)
 {
@@ -156,11 +156,11 @@ __global__ void binary_gradient_array_kernel(float *x, float *dy, int n, int s, 
     if(id < n) {
         float de = dy[id];
         dx[b*s + i] = x2*de;
-        dx[b*s + s/2 + i] = x1*de; 
+        dx[b*s + s/2 + i] = x1*de;
     }
 }
 
-extern "C" void binary_gradient_array_gpu(float *x, float *dx, int n, int size, BINARY_ACTIVATION a, float *y) 
+extern "C" void binary_gradient_array_gpu(float *x, float *dx, int n, int size, BINARY_ACTIVATION a, float *y)
 {
     binary_gradient_array_kernel<<<cuda_gridsize(n/2), BLOCK>>>(x, dx, n/2, size, a, y);
     check_error(cudaPeekAtLastError());
@@ -175,7 +175,7 @@ __global__ void binary_activate_array_kernel(float *x, int n, int s, BINARY_ACTI
     if(id < n) y[id] = x1*x2;
 }
 
-extern "C" void binary_activate_array_gpu(float *x, int n, int size, BINARY_ACTIVATION a, float *y) 
+extern "C" void binary_activate_array_gpu(float *x, int n, int size, BINARY_ACTIVATION a, float *y)
 {
     binary_activate_array_kernel<<<cuda_gridsize(n/2), BLOCK>>>(x, n/2, size, a, y);
     check_error(cudaPeekAtLastError());
@@ -193,13 +193,13 @@ __global__ void gradient_array_kernel(float *x, int n, ACTIVATION a, float *delt
     if(i < n) delta[i] *= gradient_kernel(x[i], a);
 }
 
-extern "C" void activate_array_gpu(float *x, int n, ACTIVATION a) 
+extern "C" void activate_array_gpu(float *x, int n, ACTIVATION a)
 {
     activate_array_kernel<<<cuda_gridsize(n), BLOCK>>>(x, n, a);
     check_error(cudaPeekAtLastError());
 }
 
-extern "C" void gradient_array_gpu(float *x, int n, ACTIVATION a, float *delta) 
+extern "C" void gradient_array_gpu(float *x, int n, ACTIVATION a, float *delta)
 {
     gradient_array_kernel<<<cuda_gridsize(n), BLOCK>>>(x, n, a, delta);
     check_error(cudaPeekAtLastError());

@@ -17,4 +17,3 @@ void backward_reorg_layer_gpu(layer l, network net);
 #endif
 
 #endif
-

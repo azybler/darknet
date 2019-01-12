@@ -28,4 +28,3 @@ void bias_output(float *output, float *biases, int batch, int n, int size);
 void backward_bias(float *bias_updates, float *delta, int batch, int n, int size);
 
 #endif
-

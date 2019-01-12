@@ -15,7 +15,7 @@ void deinter_cpu(int NX, float *X, int NY, float *Y, int B, float *OUT);
 void mult_add_into_cpu(int N, float *X, float *Y, float *Z);
 
 void const_cpu(int N, float ALPHA, float *X, int INCX);
-void constrain_gpu(int N, float ALPHA, float * X, int INCX);
+void constrain_gpu(int N, float ALPHA, float *X, int INCX);
 void pow_cpu(int N, float ALPHA, float *X, int INCX, float *Y, int INCY);
 void mul_cpu(int N, float *X, int INCX, float *Y, int INCY);
 
@@ -28,7 +28,7 @@ void variance_cpu(float *x, float *mean, int batch, int filters, int spatial, fl
 void scale_bias(float *output, float *scales, int batch, int n, int size);
 void backward_scale_cpu(float *x_norm, float *delta, int batch, int n, int size, float *scale_updates);
 void mean_delta_cpu(float *delta, float *variance, int batch, int filters, int spatial, float *mean_delta);
-void  variance_delta_cpu(float *x, float *delta, float *mean, float *variance, int batch, int filters, int spatial, float *variance_delta);
+void variance_delta_cpu(float *x, float *delta, float *mean, float *variance, int batch, int filters, int spatial, float *variance_delta);
 void normalize_delta_cpu(float *x, float *mean, float *variance, float *mean_delta, float *variance_delta, int batch, int filters, int spatial, float *delta);
 void l2normalize_cpu(float *x, float *dx, int batch, int filters, int spatial);
 
@@ -48,14 +48,14 @@ void upsample_cpu(float *in, int w, int h, int c, int batch, int stride, int for
 #include "cuda.h"
 #include "tree.h"
 
-void axpy_gpu(int N, float ALPHA, float * X, int INCX, float * Y, int INCY);
-void axpy_gpu_offset(int N, float ALPHA, float * X, int OFFX, int INCX, float * Y, int OFFY, int INCY);
-void copy_gpu(int N, float * X, int INCX, float * Y, int INCY);
-void copy_gpu_offset(int N, float * X, int OFFX, int INCX, float * Y, int OFFY, int INCY);
-void add_gpu(int N, float ALPHA, float * X, int INCX);
-void supp_gpu(int N, float ALPHA, float * X, int INCX);
-void mask_gpu(int N, float * X, float mask_num, float * mask, float val);
-void scale_mask_gpu(int N, float * X, float mask_num, float * mask, float scale);
+void axpy_gpu(int N, float ALPHA, float *X, int INCX, float *Y, int INCY);
+void axpy_gpu_offset(int N, float ALPHA, float *X, int OFFX, int INCX, float *Y, int OFFY, int INCY);
+void copy_gpu(int N, float *X, int INCX, float *Y, int INCY);
+void copy_gpu_offset(int N, float *X, int OFFX, int INCX, float *Y, int OFFY, int INCY);
+void add_gpu(int N, float ALPHA, float *X, int INCX);
+void supp_gpu(int N, float ALPHA, float *X, int INCX);
+void mask_gpu(int N, float *X, float mask_num, float *mask, float val);
+void scale_mask_gpu(int N, float *X, float mask_num, float *mask, float scale);
 void const_gpu(int N, float ALPHA, float *X, int INCX);
 void pow_gpu(int N, float ALPHA, float *X, int INCX, float *Y, int INCY);
 void mul_gpu(int N, float *X, int INCX, float *Y, int INCY);

@@ -20,4 +20,3 @@ void backward_avgpool_layer_gpu(avgpool_layer l, network net);
 #endif
 
 #endif
-

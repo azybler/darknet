@@ -20,4 +20,3 @@ void backward_maxpool_layer_gpu(maxpool_layer l, network net);
 #endif
 
 #endif
-

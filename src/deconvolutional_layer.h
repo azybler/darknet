@@ -22,4 +22,3 @@ void update_deconvolutional_layer(layer l, update_args a);
 void backward_deconvolutional_layer(layer l, network net);
 
 #endif
-
