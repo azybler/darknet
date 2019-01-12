@@ -4,4 +4,8 @@ Darknet53 448x448
 ResNeXt 50
 ./darknet classifier predict cfg/imagenet1k.data cfg/resnext50.cfg weights/resnext50.weights data/dog.jpg
 
-./darknet detect cfg/yolov3.cfg weights/yolov3-spp.weights data/dog.jpg
+./darknet detect cfg/yolov3-spp.cfg weights/yolov3-spp.weights data/person.jpg -out person
+
+./darknet detect cfg/yolov3-spp.cfg weights/yolov3-spp.weights data/highway2.jpg -thresh 0.1 -out highway2
+
+./darknet isegmenter test cfg/coco.data cfg/yolov3-spp.cfg weights/yolov3-spp.weights data/people.jpg
