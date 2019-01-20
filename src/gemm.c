@@ -5,8 +5,8 @@
 #include <stdio.h>
 #include <math.h>
 
-void gemm_bin(int M, int N, int K, float ALPHA, 
-        char  *A, int lda, 
+void gemm_bin(int M, int N, int K, float ALPHA,
+        char  *A, int lda,
         float *B, int ldb,
         float *C, int ldc)
 {
@@ -62,8 +62,8 @@ void time_random_matrix(int TA, int TB, int m, int k, int n)
 }
 
 
-void gemm(int TA, int TB, int M, int N, int K, float ALPHA, 
-        float *A, int lda, 
+void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
+        float *A, int lda,
         float *B, int ldb,
         float BETA,
         float *C, int ldc)
@@ -71,8 +71,8 @@ void gemm(int TA, int TB, int M, int N, int K, float ALPHA,
     gemm_cpu( TA,  TB,  M, N, K, ALPHA,A,lda, B, ldb,BETA,C,ldc);
 }
 
-void gemm_nn(int M, int N, int K, float ALPHA, 
-        float *A, int lda, 
+void gemm_nn(int M, int N, int K, float ALPHA,
+        float *A, int lda,
         float *B, int ldb,
         float *C, int ldc)
 {
@@ -88,8 +88,8 @@ void gemm_nn(int M, int N, int K, float ALPHA,
     }
 }
 
-void gemm_nt(int M, int N, int K, float ALPHA, 
-        float *A, int lda, 
+void gemm_nt(int M, int N, int K, float ALPHA,
+        float *A, int lda,
         float *B, int ldb,
         float *C, int ldc)
 {
@@ -106,8 +106,8 @@ void gemm_nt(int M, int N, int K, float ALPHA,
     }
 }
 
-void gemm_tn(int M, int N, int K, float ALPHA, 
-        float *A, int lda, 
+void gemm_tn(int M, int N, int K, float ALPHA,
+        float *A, int lda,
         float *B, int ldb,
         float *C, int ldc)
 {
@@ -123,8 +123,8 @@ void gemm_tn(int M, int N, int K, float ALPHA,
     }
 }
 
-void gemm_tt(int M, int N, int K, float ALPHA, 
-        float *A, int lda, 
+void gemm_tt(int M, int N, int K, float ALPHA,
+        float *A, int lda,
         float *B, int ldb,
         float *C, int ldc)
 {
@@ -142,41 +142,46 @@ void gemm_tt(int M, int N, int K, float ALPHA,
 }
 
 
-void gemm_cpu(int TA, int TB, int M, int N, int K, float ALPHA, 
-        float *A, int lda, 
+void gemm_cpu(int TA, int TB, int M, int N, int K, float ALPHA,
+        float *A, int lda,
         float *B, int ldb,
         float BETA,
         float *C, int ldc)
 {
-    //printf("cpu: %d %d %d %d %d %f %d %d %f %d\n",TA, TB, M, N, K, ALPHA, lda, ldb, BETA, ldc);
+    printf("[gemm_cpu] cpu: %d %d %d %d %d %f %d %d %f %d\n", TA, TB, M, N, K, ALPHA, lda, ldb, BETA, ldc);
+
     int i, j;
     for(i = 0; i < M; ++i){
         for(j = 0; j < N; ++j){
             C[i*ldc + j] *= BETA;
         }
     }
-    if(!TA && !TB)
-        gemm_nn(M, N, K, ALPHA,A,lda, B, ldb,C,ldc);
-    else if(TA && !TB)
-        gemm_tn(M, N, K, ALPHA,A,lda, B, ldb,C,ldc);
-    else if(!TA && TB)
-        gemm_nt(M, N, K, ALPHA,A,lda, B, ldb,C,ldc);
-    else
-        gemm_tt(M, N, K, ALPHA,A,lda, B, ldb,C,ldc);
+    if (!TA && !TB) {
+        printf("[gemm_cpu] (!TA && !TB)\n");
+        gemm_nn(M, N, K, ALPHA, A, lda, B, ldb, C, ldc);
+    } else if (TA && !TB) {
+        printf("[gemm_cpu] (TA && !TB)\n");
+        gemm_tn(M, N, K, ALPHA, A, lda, B, ldb, C, ldc);
+    } else if (!TA && TB) {
+        printf("[gemm_cpu] (!TA && TB)\n");
+        gemm_nt(M, N, K, ALPHA, A, lda, B, ldb, C, ldc);
+    } else {
+        gemm_tt(M, N, K, ALPHA, A, lda, B, ldb, C, ldc);
+    }
 }
 
 #ifdef GPU
 
 #include <math.h>
 
-void gemm_gpu(int TA, int TB, int M, int N, int K, float ALPHA, 
-        float *A_gpu, int lda, 
+void gemm_gpu(int TA, int TB, int M, int N, int K, float ALPHA,
+        float *A_gpu, int lda,
         float *B_gpu, int ldb,
         float BETA,
         float *C_gpu, int ldc)
 {
     cublasHandle_t handle = blas_handle();
-    cudaError_t status = cublasSgemm(handle, (TB ? CUBLAS_OP_T : CUBLAS_OP_N), 
+    cudaError_t status = cublasSgemm(handle, (TB ? CUBLAS_OP_T : CUBLAS_OP_N),
             (TA ? CUBLAS_OP_T : CUBLAS_OP_N), N, M, K, &ALPHA, B_gpu, ldb, A_gpu, lda, &BETA, C_gpu, ldc);
     check_error(status);
 }
@@ -285,38 +290,38 @@ void test_gpu_accuracy(int TA, int TB, int m, int k, int n)
 int test_gpu_blas()
 {
     /*
-       test_gpu_accuracy(0,0,10,576,75); 
+       test_gpu_accuracy(0,0,10,576,75);
 
-       test_gpu_accuracy(0,0,17,10,10); 
-       test_gpu_accuracy(1,0,17,10,10); 
-       test_gpu_accuracy(0,1,17,10,10); 
-       test_gpu_accuracy(1,1,17,10,10); 
+       test_gpu_accuracy(0,0,17,10,10);
+       test_gpu_accuracy(1,0,17,10,10);
+       test_gpu_accuracy(0,1,17,10,10);
+       test_gpu_accuracy(1,1,17,10,10);
 
-       test_gpu_accuracy(0,0,1000,10,100); 
-       test_gpu_accuracy(1,0,1000,10,100); 
-       test_gpu_accuracy(0,1,1000,10,100); 
-       test_gpu_accuracy(1,1,1000,10,100); 
+       test_gpu_accuracy(0,0,1000,10,100);
+       test_gpu_accuracy(1,0,1000,10,100);
+       test_gpu_accuracy(0,1,1000,10,100);
+       test_gpu_accuracy(1,1,1000,10,100);
 
-       test_gpu_accuracy(0,0,10,10,10); 
+       test_gpu_accuracy(0,0,10,10,10);
 
-       time_gpu(0,0,64,2916,363); 
-       time_gpu(0,0,64,2916,363); 
-       time_gpu(0,0,64,2916,363); 
-       time_gpu(0,0,192,729,1600); 
-       time_gpu(0,0,384,196,1728); 
-       time_gpu(0,0,256,196,3456); 
-       time_gpu(0,0,256,196,2304); 
-       time_gpu(0,0,128,4096,12544); 
-       time_gpu(0,0,128,4096,4096); 
+       time_gpu(0,0,64,2916,363);
+       time_gpu(0,0,64,2916,363);
+       time_gpu(0,0,64,2916,363);
+       time_gpu(0,0,192,729,1600);
+       time_gpu(0,0,384,196,1728);
+       time_gpu(0,0,256,196,3456);
+       time_gpu(0,0,256,196,2304);
+       time_gpu(0,0,128,4096,12544);
+       time_gpu(0,0,128,4096,4096);
      */
-    time_gpu(0,0,64,75,12544); 
-    time_gpu(0,0,64,75,12544); 
-    time_gpu(0,0,64,75,12544); 
-    time_gpu(0,0,64,576,12544); 
-    time_gpu(0,0,256,2304,784); 
-    time_gpu(1,1,2304,256,784); 
-    time_gpu(0,0,512,4608,196); 
-    time_gpu(1,1,4608,512,196); 
+    time_gpu(0,0,64,75,12544);
+    time_gpu(0,0,64,75,12544);
+    time_gpu(0,0,64,75,12544);
+    time_gpu(0,0,64,576,12544);
+    time_gpu(0,0,256,2304,784);
+    time_gpu(1,1,2304,256,784);
+    time_gpu(0,0,512,4608,196);
+    time_gpu(1,1,4608,512,196);
 
     return 0;
 }

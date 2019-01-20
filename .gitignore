@@ -29,3 +29,6 @@ Thumbs.db
 # binaries
 libdarknet.a
 libdarknet.so
+
+# CoCo dataset
+scripts/coco

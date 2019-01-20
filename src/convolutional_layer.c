@@ -122,15 +122,15 @@ static size_t get_workspace_size(layer l){
 #ifdef CUDNN
 void cudnn_convolutional_setup(layer *l)
 {
-    cudnnSetTensor4dDescriptor(l->dsrcTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, l->batch, l->c, l->h, l->w); 
-    cudnnSetTensor4dDescriptor(l->ddstTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, l->batch, l->out_c, l->out_h, l->out_w); 
+    cudnnSetTensor4dDescriptor(l->dsrcTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, l->batch, l->c, l->h, l->w);
+    cudnnSetTensor4dDescriptor(l->ddstTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, l->batch, l->out_c, l->out_h, l->out_w);
 
-    cudnnSetTensor4dDescriptor(l->srcTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, l->batch, l->c, l->h, l->w); 
-    cudnnSetTensor4dDescriptor(l->dstTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, l->batch, l->out_c, l->out_h, l->out_w); 
-    cudnnSetTensor4dDescriptor(l->normTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, 1, l->out_c, 1, 1); 
+    cudnnSetTensor4dDescriptor(l->srcTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, l->batch, l->c, l->h, l->w);
+    cudnnSetTensor4dDescriptor(l->dstTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, l->batch, l->out_c, l->out_h, l->out_w);
+    cudnnSetTensor4dDescriptor(l->normTensorDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, 1, l->out_c, 1, 1);
 
-    cudnnSetFilter4dDescriptor(l->dweightDesc, CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW, l->n, l->c/l->groups, l->size, l->size); 
-    cudnnSetFilter4dDescriptor(l->weightDesc, CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW, l->n, l->c/l->groups, l->size, l->size); 
+    cudnnSetFilter4dDescriptor(l->dweightDesc, CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW, l->n, l->c/l->groups, l->size, l->size);
+    cudnnSetFilter4dDescriptor(l->weightDesc, CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW, l->n, l->c/l->groups, l->size, l->size);
     #if CUDNN_MAJOR >= 6
     cudnnSetConvolution2dDescriptor(l->convDesc, l->pad, l->pad, l->stride, l->stride, 1, 1, CUDNN_CROSS_CORRELATION, CUDNN_DATA_FLOAT);
     #else
@@ -444,11 +444,29 @@ void backward_bias(float *bias_updates, float *delta, int batch, int n, int size
 
 void forward_convolutional_layer(convolutional_layer l, network net)
 {
-    int i, j;
+    printf("[forward_convolutional_layer] BEGIN\n");
+    printf("[forward_convolutional_layer] l.batch = %d\n", l.batch);
+    printf("[forward_convolutional_layer] l.binary = %d\n", l.binary);
+    printf("[forward_convolutional_layer] l.xnor = %d\n", l.xnor);
+    printf("[forward_convolutional_layer] l.n = %d\n", l.n);
+    printf("[forward_convolutional_layer] l.groups = %d\n", l.groups);
+    printf("[forward_convolutional_layer] l.size = %d\n", l.size);
+    printf("[forward_convolutional_layer] l.c = %d\n", l.c);
+    printf("[forward_convolutional_layer] l.out_w = %d\n", l.out_w);
+    printf("[forward_convolutional_layer] l.out_h = %d\n", l.out_h);
+    printf("[forward_convolutional_layer] l.nweights = %d\n", l.nweights);
+    printf("[forward_convolutional_layer] l.batch_normalize = %d\n", l.batch_normalize);
 
-    fill_cpu(l.outputs*l.batch, 0, l.output, 1);
+    int i, j, outputSize;
+    outputSize = l.outputs * l.batch;
 
-    if(l.xnor){
+    printf("[forward_convolutional_layer] outputSize = %d\n", outputSize);
+
+    fill_cpu(outputSize, 0, l.output, 1);
+
+    if (l.xnor) {
+        printf("[forward_convolutional_layer] (l.xnor)\n");
+
         binarize_weights(l.weights, l.n, l.c/l.groups*l.size*l.size, l.binary_weights);
         swap_binary(&l);
         binarize_cpu(net.input, l.c*l.h*l.w*l.batch, l.binary_input);
@@ -458,6 +476,7 @@ void forward_convolutional_layer(convolutional_layer l, network net)
     int m = l.n/l.groups;
     int k = l.size*l.size*l.c/l.groups;
     int n = l.out_w*l.out_h;
+
     for(i = 0; i < l.batch; ++i){
         for(j = 0; j < l.groups; ++j){
             float *a = l.weights + j*l.nweights/l.groups;
@@ -470,18 +489,37 @@ void forward_convolutional_layer(convolutional_layer l, network net)
             } else {
                 im2col_cpu(im, l.c/l.groups, l.h, l.w, l.size, l.stride, l.pad, b);
             }
-            gemm(0,0,m,n,k,1,a,k,b,n,1,c,n);
+
+            printf("[forward_convolutional_layer] call gemm TA=0\n");
+            printf("[forward_convolutional_layer] call gemm TB=0\n");
+            printf("[forward_convolutional_layer] call gemm M=%d\n", m);
+            printf("[forward_convolutional_layer] call gemm N=%d\n", n);
+            printf("[forward_convolutional_layer] call gemm K=%d\n", k);
+            printf("[forward_convolutional_layer] call gemm ALPHA=1\n");
+            printf("[forward_convolutional_layer] call gemm lda=%d\n", k);
+            printf("[forward_convolutional_layer] call gemm ldb=%d\n", n);
+            printf("[forward_convolutional_layer] call gemm BETA=1\n");
+            printf("[forward_convolutional_layer] call gemm ldc=%d\n", n);
+            gemm(0, 0, m, n, k, 1, a, k, b, n, 1, c, n);
         }
     }
 
-    if(l.batch_normalize){
+    if (l.batch_normalize) {
+        printf("[forward_convolutional_layer] (l.batch_normalize)\n");
         forward_batchnorm_layer(l, net);
     } else {
         add_bias(l.output, l.biases, l.batch, l.n, l.out_h*l.out_w);
     }
 
-    activate_array(l.output, l.outputs*l.batch, l.activation);
-    if(l.binary || l.xnor) swap_binary(&l);
+    // modifies l.output float array in-place
+    // l.output is the float array with size outputSize
+    activate_array(l.output, outputSize, l.activation);
+    if (l.binary || l.xnor) {
+        printf("[forward_convolutional_layer] (l.binary || l.xnor)\n");
+        swap_binary(&l);
+    }
+
+    printf("[forward_convolutional_layer] END\n");
 }
 
 void backward_convolutional_layer(convolutional_layer l, network net)
@@ -511,7 +549,7 @@ void backward_convolutional_layer(convolutional_layer l, network net)
             if(l.size == 1){
                 b = im;
             } else {
-                im2col_cpu(im, l.c/l.groups, l.h, l.w, 
+                im2col_cpu(im, l.c/l.groups, l.h, l.w,
                         l.size, l.stride, l.pad, b);
             }
 
